@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.21)
+project(FireBarrier)
+
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+
+find_package(Qt6 REQUIRED COMPONENTS
+    Core
+    Widgets
+)
+
+set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
+file(GLOB_RECURSE SOURCES "${SOURCE_DIR}/*.cpp" "${SOURCE_DIR}/*.h")
+
+include_directories(${SOURCE_DIR})
+
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+target_link_libraries(${PROJECT_NAME}  Qt6::Core Qt6::Widgets)

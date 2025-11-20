@@ -1,0 +1,218 @@
+Here is shared_protocol/help.txt written exactly for a developer on your team.
+It is clean, brief, technical, and explains how to use every JSON file in the directory you showed:
+
+Shared Protocol – Developer Help Guide (Version 1.0)
+
+Location: shared_protocol/
+
+This folder defines the official message contract used for communication between:
+
+C++ Daemon (flow builder + packet capture)
+
+Python FastAPI ML + Policy Engine
+
+Qt UI (indirectly through the daemon)
+
+All communication between Daemon ↔ Python backend uses NNG (REQ/REP and PUSH/PULL patterns).
+All payloads are UTF-8 JSON, following the formats in this directory.
+
+Files Overview
+1. request_format.json
+
+Direction: C++ Daemon → Python Server
+Purpose: Send a flow_analysis_request containing one network flow.
+Used when:
+
+Daemon finishes constructing a flow
+
+Needs ML inference + Zero Trust decision
+
+Contains:
+
+flow metadata (IPs, ports, protocol)
+
+transport stats (packet sizes, directions, timestamps)
+
+TLS details
+
+statistical features (entropy, duration, etc.)
+
+This is the main input to the ML engine.
+
+2. response_format.json
+
+Direction: Python Server → C++ Daemon
+Purpose: ML engine responds to a flow request.
+Used when:
+
+ML inference completes
+
+Zero Trust scoring is computed
+
+Contains:
+
+classification (benign/malicious)
+
+threat_score
+
+risk_score
+
+zero_trust_decision
+
+threat category
+
+confidence
+
+explanation metadata (model version, features used)
+
+Daemon uses this to decide:
+
+quarantine flow
+
+log incident
+
+alert UI
+
+update local metrics
+
+3. error_event.json
+
+Direction: Python → C++
+Purpose: Communicate failures (bad input, ML errors, shape mismatch).
+Daemon behavior:
+
+retry
+
+fallback
+
+Zero Trust safe mode
+
+Includes error code + human description.
+
+4. daemon_ping_format.json
+
+Direction: Daemon → Python
+Purpose: Periodic health/status message.
+Sent every: e.g., 5 seconds by heartbeat thread.
+
+Contains:
+
+CPU usage
+
+memory usage
+
+uptime
+
+total flows processed
+
+host UUID
+
+Python logs this + updates dashboards.
+
+5. server_ack_format.json
+
+Direction: Python → Daemon
+Purpose: Light “acknowledged” response when:
+
+ping received
+
+non-flow management request handled
+
+Contains a timestamp + simple “received” message.
+
+6. model_update_push_format.json
+
+Direction: Python Aggregator → C++ Daemon
+Purpose: Push a global model update (federated round).
+
+Contains:
+
+global model version
+
+federated round
+
+compressed weights (base64)
+
+Daemon:
+
+stores update
+
+notifies Qt UI
+
+signals local server to reload model
+
+7. model_update_submission_format.json
+
+Direction: Python Local → Python Aggregator
+(Not used by daemon unless future extension.)
+
+Contains:
+
+local training stats
+
+local delta weights
+
+model version contributions
+
+Useful if you later implement local federated learning on the daemon side.
+
+Message Transport Rules
+Encoding
+
+Always UTF-8
+
+JSON only
+
+No binary except base64 inside JSON
+
+NNG Patterns
+
+Flow analysis: REQ/REP
+
+Ping/ACK: REQ/REP
+
+Model push: PUSH/PULL
+
+Versioning
+
+Every message contains:
+
+"version": "1.0"
+"type": "flow_analysis_request"
+
+
+Always check these fields first.
+
+Validation
+
+Daemon must validate:
+
+required fields
+
+numeric arrays lengths
+
+correct types (num_packets = len(packet_sizes))
+
+TLS fields present only if is_tls = true
+
+If validation fails → daemon does NOT send to ML server.
+
+Developer Notes
+
+The JSON files in this folder are the source of truth.
+
+Any change here MUST be reflected in:
+
+C++ struct → JSON encoder (JsonProtocol.cpp)
+
+Python pydantic models
+
+C++ decoder for results
+
+Version number bump
+
+NEVER send raw packets over NNG.
+
+ALWAYS send flows (summaries).
+
+One flow = one inference.

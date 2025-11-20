@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "type": "local_model_update",
+  "timestamp": 1730000035,
+
+  "node_id": "edge-node-uuid-123",
+  "model_version": "cnn_v1.3_global",
+
+  "training_stats": {
+    "num_samples": 240,
+    "epochs": 1,
+    "loss": 0.41
+  },
+
+  "update": {
+    "compression": "quant8",
+    "format": "delta_weights",
+    "payload": "<base64-encoded-binary>"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "type": "daemon_status_ping",
+  "timestamp": 1730000005,
+  "host_id": "edge-node-uuid-123",
+
+  "status": {
+    "cpu_usage": 22.1,
+    "mem_usage": 512.3,
+    "flows_processed": 102,
+    "uptime_sec": 3600
+  }
+}

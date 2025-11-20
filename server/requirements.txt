@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+
+torch
+
+pynng
+msgpack
+
+numpy
+scikit-learn

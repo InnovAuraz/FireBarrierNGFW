@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "type": "model_update",
+  "timestamp": 1730000020,
+
+  "model_version": "cnn_v1.4_global",
+  "federated_round": 13,
+
+  "update": {
+    "compression": "quant8",
+    "format": "torch_state_dict",
+    "payload": "<base64-encoded-binary>"
+  }
+}

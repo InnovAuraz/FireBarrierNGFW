@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "type": "flow_analysis_response",
+  "timestamp": 1730000002,
+
+  "flow_id": "flow_001",
+
+  "classification": "malicious",
+  "threat_score": 0.86,
+  "risk_score": 78,
+  "zero_trust_decision": "quarantine",
+
+  "category": "Encrypted C2 Beaconing",
+  "confidence": 0.93,
+
+  "explanation": {
+    "model_version": "cnn_v1.3_global",
+    "federated_round": 12,
+    "features_used": {
+      "entropy": 7.21,
+      "packet_length_pattern": "matched",
+      "tls_version": "1.3",
+      "sni": "example.com"
+    },
+    "notes": "Flow resembles known C2 cluster with periodic TLS 1.3 bursts."
+  }
+}

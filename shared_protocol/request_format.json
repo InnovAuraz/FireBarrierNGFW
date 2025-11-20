@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "type": "flow_analysis_request",
+  "timestamp": 1730000000,
+  "host_id": "edge-node-uuid-123",
+
+  "flow": {
+    "flow_id": "flow_001",
+    "src_ip": "192.168.1.10",
+    "dst_ip": "34.102.120.56",
+    "src_port": 52521,
+    "dst_port": 443,
+    "protocol": "TCP",
+
+    "transport": {
+      "packet_sizes": [54, 1500, 1500, 400],
+      "directions": [1, -1, 1, 1],
+      "inter_arrival_ms": [0.0, 2.3, 1.1, 0.7],
+      "total_bytes": 3454,
+      "num_packets": 4
+    },
+
+    "tls": {
+      "is_tls": true,
+      "version": "1.3",
+      "sni": "example.com",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256"
+    },
+
+    "stats": {
+      "entropy": 7.21,
+      "duration_ms": 12.4,
+      "mean_packet_size": 863.5
+    }
+  }
+}

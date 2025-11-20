@@ -1,0 +1,108 @@
+# ------------------------------------------------------------------------------
+# GLOBAL
+# ------------------------------------------------------------------------------
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Build artifacts
+build/
+build-*/
+cmake-build-*/
+
+# Logs
+*.log
+
+# Python virtual environments
+venv/
+env/
+.env/
+.envrc
+__pycache__/
+*.pyc
+*.pyo
+
+
+# ------------------------------------------------------------------------------
+# C++ (Qt + Daemon)
+# ------------------------------------------------------------------------------
+# Qt generated files
+*.moc
+*.qrc.cpp
+*.autosave
+*.pro.user
+*.pri.user
+
+# CMake generated
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Binaries
+*.o
+*.obj
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.exe
+*.out
+
+# Crash dumps
+*.dmp
+core
+
+
+# ------------------------------------------------------------------------------
+# Python Server (FastAPI + ML)
+# ------------------------------------------------------------------------------
+# Packaging
+dist/
+build/
+*.egg-info/
+
+# ML-related
+*.pth
+*.pt
+*.h5
+*.joblib
+*.pickle
+*.pkl
+checkpoints/
+saved_models/
+runs/
+
+# Data folders that shouldn't go to git
+data/
+datasets/
+uploads/
+
+
+# ------------------------------------------------------------------------------
+# Deployment
+# ------------------------------------------------------------------------------
+# Docker
+docker_temp/
+*.pid
+
+# Env & secrets
+secret.json
+*.key
+*.cert
+*.pem
+.kaggle/
+tokens/
+
+# ------------------------------------------------------------------------------
+# Shared Protocol Files
+# ------------------------------------------------------------------------------
+# Generated schemas or temp files
+generated/
+*.tmp

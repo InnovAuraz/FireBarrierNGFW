@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "type": "error",
+  "timestamp": 1730000003,
+
+  "error": {
+    "code": "INFERENCE_FAILED",
+    "message": "Model could not process input.",
+    "details": "Shape mismatch in packet_sizes."
+  }
+}
