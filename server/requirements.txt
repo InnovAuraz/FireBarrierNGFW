@@ -8,3 +8,6 @@ msgpack
 
 numpy
 scikit-learn
+python-multipart
+aiofiles
+requests
