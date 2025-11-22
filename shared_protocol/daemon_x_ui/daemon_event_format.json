@@ -1,0 +1,5 @@
+{
+  "type": "daemon_event",
+  "event": "daemon_alert",
+  "payload": {}
+}

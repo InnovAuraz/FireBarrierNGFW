@@ -1,0 +1,12 @@
+{
+    "log_file": "daemon.log",
+
+    "nng_server_address": "tcp://127.0.0.1:6001",
+    "nng_client_address": "tcp://127.0.0.1:7001",
+
+    "pcap_device": "\\Device\\NPF_{YOUR-NPCAP-ID}",
+
+    "stats_interval_ms": 1000,
+    "python_server_timeout_ms": 5000,
+    "ui_exe_name": "FireBarrier.exe"
+}

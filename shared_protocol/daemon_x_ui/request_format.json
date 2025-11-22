@@ -1,0 +1,5 @@
+{
+  "type": "ui_request",
+  "action": "ui_get_status",
+  "version": "1.0"
+}

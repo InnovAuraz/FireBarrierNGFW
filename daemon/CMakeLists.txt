@@ -12,7 +12,7 @@ set(NPCAP_LIB_DIR "${EXTERNAL_DIR}/npcap/lib/x64")
 
 # NNG include + library paths
 set(NNG_INCLUDE "${EXTERNAL_DIR}/nng/include")
-set(NNG_LIB_DIR "${EXTERNAL_DIR}/nng/lib")
+set(NNG_LIB_DIR "${EXTERNAL_DIR}/nng/lib/x64")
 
 include_directories(
     ${NPCAP_INCLUDE}
@@ -31,8 +31,11 @@ file(GLOB SRC_FILES
 
 add_executable(ngfw_daemon ${SRC_FILES})
 
+target_compile_definitions(ngfw_daemon PRIVATE NNG_STATIC_LIB)
+
 target_link_libraries(ngfw_daemon
     wpcap
     Packet
     nng
+    ws2_32
 )
