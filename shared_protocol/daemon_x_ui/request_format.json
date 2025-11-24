@@ -1,5 +1,5 @@
 {
   "type": "ui_request",
-  "action": "ui_get_status",
-  "version": "1.0"
+  "version": "1.0",
+  "action": "<ui_get_status | ui_get_stats | ui_get_flows>"
 }

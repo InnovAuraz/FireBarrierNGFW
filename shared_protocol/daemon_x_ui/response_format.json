@@ -1,6 +1,7 @@
 {
   "type": "ui_response",
-  "action": "ui_get_status",
+  "version": "1.0",
+  "action": "<same as request>",
   "status": "ok",
   "payload": {}
 }

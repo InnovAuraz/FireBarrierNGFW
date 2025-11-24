@@ -1,0 +1,4 @@
+{
+    "daemon_path": "ngfw_daemon.exe",
+    "ui_name": "FireBarrier"
+}

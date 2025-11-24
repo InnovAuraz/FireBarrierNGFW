@@ -1,5 +1,6 @@
 {
   "type": "daemon_event",
-  "event": "daemon_alert",
+  "version": "1.0",
+  "event": "<daemon_alert | daemon_error | daemon_model_update | daemon_status_change>",
   "payload": {}
 }

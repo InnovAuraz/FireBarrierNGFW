@@ -1,0 +1,8 @@
+{
+  "type": "ui_response",
+  "version": "1.0",
+  "action": "<requested action>",
+  "status": "error",
+  "error": "<string>",
+  "payload": "<raw string or JSON>"
+}

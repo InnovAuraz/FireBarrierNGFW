@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/icons/firebarrier_normal.png</file>
+        <file>resources/icons/firebarrier_alert.png</file>
+    </qresource>
+    <qresource prefix="/styles">
+    </qresource>
+</RCC>
