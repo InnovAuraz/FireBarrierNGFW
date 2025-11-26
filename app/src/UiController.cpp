@@ -1,6 +1,44 @@
 #include "UiController.h"
 
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
 #include <QDebug>
+#include <QFile>
+#include <QFileInfo>
+
+static bool daemonIsRunningByPid(const QString &daemonPath)
+{
+    QString pidFile = QFileInfo(daemonPath).absolutePath() + "/daemon.pid";
+
+    QFile f(pidFile);
+    if (!f.exists() || !f.open(QIODevice::ReadOnly))
+        return false;
+
+    QByteArray data = f.readAll().trimmed();
+    if (data.isEmpty())
+        return false;
+
+    bool ok = false;
+    qint64 pid = data.toLongLong(&ok);
+    if (!ok || pid <= 0)
+        return false;
+
+#ifdef Q_OS_WIN
+    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, DWORD(pid));
+    if (!h)
+        return false;
+
+    DWORD exitCode=0;
+    BOOL alive=GetExitCodeProcess(h,&exitCode);
+    CloseHandle(h);
+    return alive && exitCode == STILL_ACTIVE;
+#else
+    return (::kill(pid, 0) == 0);
+#endif
+}
+
 
 // ----------------------------------------
 // Constructor / Destructor
@@ -9,29 +47,30 @@
 UiController::UiController(QObject *parent)
     : QObject(parent),
       m_launcher(this),
-      m_client(this),
-      m_subscriber(this)
+      m_client(this)
 {
-    // Connect DaemonClient signals
-    connect(&m_client, &DaemonClient::requestCompleted,
-            this, &UiController::onRequestCompleted);
+    //
+    // Connect DaemonClient signals (PAIR0 channel)
+    //
+    connect(&m_client, &DaemonClient::uiResponseReceived,
+            this, &UiController::onUiResponseReceived);
 
-    connect(&m_client, &DaemonClient::requestFailed,
-            this, &UiController::onRequestFailed);
+    connect(&m_client, &DaemonClient::daemonEventReceived,
+            this, &UiController::onDaemonEventReceived);
 
-    // Connect EventSubscriber signals
-    connect(&m_subscriber, &EventSubscriber::eventReceived,
-            this, &UiController::onEventReceived);
+    connect(&m_client, &DaemonClient::connectionError,
+            this, &UiController::onConnectionError);
 
-    connect(&m_subscriber, &EventSubscriber::subscriberError,
-            this, &UiController::onSubscriberError);
+    connect(&m_client, &DaemonClient::connectionEstablished,
+            this, []() {
+                qDebug() << "[UiController] DaemonClient connected.";
+            });
 }
 
 UiController::~UiController()
 {
-    // Ensure subscriber is stopped before destruction
-    m_subscriber.stop();
-    // Daemon may be left running intentionally; we do not force kill here
+    // DaemonClient and DaemonLauncher clean themselves.
+    // We intentionally do NOT kill the daemon on UI shutdown.
 }
 
 // ----------------------------------------
@@ -44,21 +83,20 @@ bool UiController::initialize()
     QString errorMsg;
 
     if (!UiConfigLoader::load(config, &errorMsg)) {
-        emit controllerError(QStringLiteral("Failed to load ui_config.json: %1").arg(errorMsg));
+        emit controllerError(
+            QStringLiteral("Failed to load ui_config.json: %1").arg(errorMsg));
         return false;
     }
 
     m_daemonPath = config.daemonPath;
     m_launcher.setDaemonPath(m_daemonPath);
 
-    // For now endpoints are fixed; in future they could be in config as well
+    // Configure the DaemonClient endpoint (PAIR0 on 6001)
     m_client.setEndpoint(m_reqEndpoint);
-    m_subscriber.setEndpoint(m_subEndpoint);
 
-    // Start subscriber (PUB/SUB listener)
-    if (!m_subscriber.start()) {
-        emit controllerError(QStringLiteral("Failed to start event subscriber"));
-        return false;
+    if (daemonIsRunningByPid(m_daemonPath)) {
+        qDebug() << "[UiController] Daemon already running → Auto-connect UI client";
+        m_client.startClient();      // <--- this triggers delayed connect
     }
 
     return true;
@@ -71,36 +109,49 @@ bool UiController::initialize()
 bool UiController::startDaemon()
 {
     if (m_daemonPath.isEmpty()) {
-        emit controllerError(QStringLiteral("Daemon path not configured"));
+        emit controllerError("Daemon path not configured");
         return false;
     }
 
-    if (m_launcher.isRunning()) {
-        // Already running: still emit signal so UI stays in sync
+    //
+    // 1. If daemon already running → just start the DaemonClient
+    //
+    if (daemonIsRunningByPid(m_daemonPath)) {
+        qDebug() << "[UiController] Daemon already running, starting client...";
+        m_client.startClient();     // <--- NEW
         emit daemonStarted();
         return true;
     }
 
+    //
+    // 2. Daemon not running → launch it
+    //
     if (!m_launcher.startDaemon()) {
-        emit controllerError(QStringLiteral("Failed to start daemon process at: %1")
-                             .arg(m_daemonPath));
+        emit controllerError(
+            QStringLiteral("Failed to start daemon at: %1").arg(m_daemonPath));
         return false;
     }
+
+    //
+    // 3. NOW start the client (delayed connect)
+    //
+    qDebug() << "[UiController] Daemon launched, starting client...";
+    m_client.startClient();         // <--- NEW
 
     emit daemonStarted();
     return true;
 }
 
+
 bool UiController::stopDaemon()
 {
     if (!m_launcher.isRunning()) {
-        // Already stopped
         emit daemonStopped();
         return true;
     }
 
     if (!m_launcher.stopDaemon()) {
-        emit controllerError(QStringLiteral("Failed to stop daemon process"));
+        emit controllerError(QStringLiteral("Failed to stop daemon"));
         return false;
     }
 
@@ -109,7 +160,7 @@ bool UiController::stopDaemon()
 }
 
 // ----------------------------------------
-// REQ actions (async, via DaemonClient)
+// UI request actions (async via DaemonClient)
 // ----------------------------------------
 
 void UiController::refreshStatus()
@@ -128,42 +179,22 @@ void UiController::refreshFlows()
 }
 
 // ----------------------------------------
-// Internal slots: REQ/REP handling
+// Slots for DaemonClient signals
 // ----------------------------------------
 
-void UiController::onRequestCompleted(const QString &action, const QByteArray &json)
+void UiController::onUiResponseReceived(const UiResponse &resp)
 {
-    UiResponse resp;
-    QString error;
-
-    if (!JsonProtocol::parseUiResponse(json, resp, &error)) {
-        emit controllerError(QStringLiteral("Failed to parse ui_response for action '%1': %2")
-                             .arg(action, error));
-        return;
-    }
-
-    // Optional sanity: ensure action matches
-    if (!resp.action.isEmpty() && resp.action != action) {
-        qWarning() << "UiController: response action mismatch. Expected:"
-                   << action << "got:" << resp.action;
-    }
-
-    if (!resp.ok) {
-        QString errMsg = resp.error.isEmpty()
-                ? QStringLiteral("Daemon responded with status=error for action '%1'").arg(action)
-                : resp.error;
-        emit controllerError(errMsg);
-        return;
-    }
-
     processUiResponse(resp);
 }
 
-void UiController::onRequestFailed(const QString &action, const QString &error)
+void UiController::onDaemonEventReceived(const DaemonEvent &evt)
 {
-    emit controllerError(
-        QStringLiteral("Request '%1' failed: %2").arg(action, error)
-    );
+    processDaemonEvent(evt);
+}
+
+void UiController::onConnectionError(const QString &error)
+{
+    emit controllerError(error);
 }
 
 // ----------------------------------------
@@ -173,6 +204,15 @@ void UiController::onRequestFailed(const QString &action, const QString &error)
 void UiController::processUiResponse(const UiResponse &resp)
 {
     const QString action = resp.action;
+
+    if (!resp.ok) {
+        const QString msg = resp.error.isEmpty()
+            ? QStringLiteral("Daemon responded with status=error for action '%1'")
+                  .arg(action)
+            : resp.error;
+        emit controllerError(msg);
+        return;
+    }
 
     if (action == QStringLiteral("ui_get_status")) {
         UIStatusPayload status;
@@ -200,7 +240,7 @@ void UiController::processUiResponse(const UiResponse &resp)
         if (!JsonProtocol::decodeFlowsPayload(resp.payload, flows, &err)) {
             emit controllerError(
                 QStringLiteral("Failed to decode flows payload: %1").arg(err));
-            // Even if err is set, decoder is flexible and may still produce flows
+            // decoder may still have produced some flows
         }
         emit flowsUpdated(flows);
     }
@@ -208,28 +248,6 @@ void UiController::processUiResponse(const UiResponse &resp)
         // Unknown action; not fatal, but log internally
         qWarning() << "UiController: received ui_response for unknown action:" << action;
     }
-}
-
-// ----------------------------------------
-// Internal slots: PUB/SUB handling
-// ----------------------------------------
-
-void UiController::onEventReceived(const QByteArray &json)
-{
-    DaemonEvent evt;
-    QString error;
-
-    if (!JsonProtocol::parseDaemonEvent(json, evt, &error)) {
-        emit controllerError(QStringLiteral("Failed to parse daemon_event: %1").arg(error));
-        return;
-    }
-
-    processDaemonEvent(evt);
-}
-
-void UiController::onSubscriberError(const QString &error)
-{
-    emit controllerError(QStringLiteral("Event subscriber error: %1").arg(error));
 }
 
 // ----------------------------------------

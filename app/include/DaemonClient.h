@@ -1,40 +1,61 @@
 #pragma once
 
 #include <QObject>
+#include <QThread>
 #include <QByteArray>
 #include <QString>
-#include <QFuture>
+#include <atomic>
+
+// Forward declarations for parsed protocol objects
+struct UiResponse;
+struct DaemonEvent;
+
+// Forward declare worker class
+class DaemonClientWorker;
 
 class DaemonClient : public QObject
 {
     Q_OBJECT
 public:
     explicit DaemonClient(QObject *parent = nullptr);
+    ~DaemonClient();
 
-    // Set REQ endpoint (default: tcp://127.0.0.1:6001)
     void setEndpoint(const QString &endpoint);
     QString endpoint() const;
 
-    // High-level UI requests (async)
+    // NEW — explicit lifecycle control
+    bool startClient();      // start worker + thread
+    void stopClient();       // stop worker + thread
+
+    // High-level UI actions
     void requestStatus();
     void requestStats();
     void requestFlows();
 
 signals:
-    // Emitted when a request successfully completes
-    void requestCompleted(const QString &action, const QByteArray &responseJson);
+    void uiResponseReceived(const UiResponse &resp);
+    void daemonEventReceived(const DaemonEvent &evt);
+    void connectionEstablished();
+    void connectionError(const QString &error);
 
-    // Emitted when request fails (connection error, timeout, invalid JSON, etc.)
-    void requestFailed(const QString &action, const QString &errorMessage);
+    // Used internally to send JSON to worker thread
+    void sendJson(const QByteArray &json);
 
 private:
-    // Internal helper to run an action asynchronously
-    void sendRequestAsync(const QString &action);
-
-    // Converts action string into JSON message to send
     QByteArray buildRequestJson(const QString &action) const;
 
-    QString m_endpoint;  // example: tcp://127.0.0.1:6001
+private:
+    QString m_endpoint = "tcp://127.0.0.1:6001";
 
-    QList<QFuture<void>> m_futures;
+    // Worker thread + worker object
+    QThread m_ioThread;
+    DaemonClientWorker *m_worker = nullptr;
+
+    std::atomic<bool> m_running {false};
+
+    // These are now unused but kept so that the .cpp still compiles safely.
+    // They will be NOOPs after patching DaemonClient.cpp.
+    bool startSocket() { return true; }
+    void ioThreadLoop() {}
+    void *m_socket = nullptr;
 };

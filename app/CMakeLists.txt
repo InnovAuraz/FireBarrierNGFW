@@ -41,6 +41,8 @@ link_directories(
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+set_target_properties(FireBarrier PROPERTIES WIN32_EXECUTABLE TRUE)
+
 target_compile_definitions(FireBarrier PRIVATE 
     NNG_STATIC_LIB
 )

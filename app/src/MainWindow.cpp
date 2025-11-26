@@ -48,6 +48,7 @@ MainWindow::MainWindow(QWidget* parent)
 MainWindow::~MainWindow()
 {
     // All children deleted by QObject parent/child mechanism
+    qDebug() << "MainWindow destroyed";
 }
 
 // ----------------------------------------------------

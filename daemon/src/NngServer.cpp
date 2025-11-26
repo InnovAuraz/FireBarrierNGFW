@@ -13,7 +13,7 @@ NngServer::~NngServer()
     stop();
 }
 
-// Start server and bind to address (e.g. "tcp://127.0.0.1:7001")
+// Start server and bind to address (e.g. "tcp://127.0.0.1:6001")
 bool NngServer::start(const std::string& address)
 {
     if (m_running.load())
